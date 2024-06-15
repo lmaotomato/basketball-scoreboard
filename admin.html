@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Control</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+        }
+        .admin {
+            display: inline-block;
+            background: #333;
+            color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .team, .control-group {
+            margin: 20px 0;
+        }
+        input[type="text"], input[type="number"], input[type="file"] {
+            padding: 10px;
+            font-size: 18px;
+            margin: 5px 0;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 18px;
+        }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-storage.js"></script>
+</head>
+<body>
+    <div class="admin">
+        <div class="team">
+            <h3>Team 1</h3>
+            <input type="text" id="team1NameInput" placeholder="Team 1 Name"><br>
+            <input type="number" id="team1ScoreInput" placeholder="Team 1 Score"><br>
+            <input type="number" id="team1FoulsInput" placeholder="Team 1 Fouls"><br>
+            <input type="file" id="team1LogoInput"><br>
+        </div>
+        <div class="team">
+            <h3>Team 2</h3>
+            <input type="text" id="team2NameInput" placeholder="Team 2 Name"><br>
+            <input type="number" id="team2ScoreInput" placeholder="Team 2 Score"><br>
+            <input type="number" id="team2FoulsInput" placeholder="Team 2 Fouls"><br>
+            <input type="file" id="team2LogoInput"><br>
+        </div>
+        <div class="control-group">
+            <h3>Shot Clock</h3>
+            <button onclick="setShotClock(24)">Reset to 24</button>
+            <button onclick="setShotClock(15)">Reset to 15</button>
+            <button onclick="stopShotClock()">Stop</button>
+        </div>
+        <div class="control-group">
+            <h3>Quarter</h3>
+            <input type="text" id="quarterInput" placeholder="Quarter"><br>
+            <h3>Quarter Time</h3>
+            <button onclick="adjustQuarterTime(60)">+60s</button>
+            <button onclick="adjustQuarterTime(-60)">-60s</button>
+            <button onclick="adjustQuarterTime(1)">+1s</button>
+            <button onclick="adjustQuarterTime(-1)">-1s</button>
+            <button onclick="stopQuarterTime()">Pause</button>
+            <button onclick="startQuarterTime()">Start</button>
+        </div>
+        <button onclick="updateScores()">Update Scores</button>
+    </div>
+
+    <script>
+        var firebaseConfig = {
+            apiKey: "AIzaSyAWJ-jsq3Jh_oMiE3HRBYudcQo-deMCvrc",
+            authDomain: "scoreboard-78abf.firebaseapp.com",
+            projectId: "scoreboard-78abf",
+            storageBucket: "scoreboard-78abf.appspot.com",
+            messagingSenderId: "920884021528",
+            appId: "1:920884021528:web:8e4a8cbb3730bf6cbff66d"
+        };
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.firestore();
+        var storage = firebase.storage();
+
+        function uploadLogo(team, file) {
+            if (file) {
+                const storageRef = storage.ref().child('logos/' + team + '.jpg');
+                return storageRef.put(file).then(() => {
+                    return storageRef.getDownloadURL();
+                });
+            } else {
+                return Promise.resolve(null);
+            }
+        }
+
+        function updateScores() {
+            const team1Name = document.getElementById('team1NameInput').value;
+            const team1Score = document.getElementById('team1ScoreInput').value;
+            const team1Fouls = document.getElementById('team1FoulsInput').value;
+            const team1LogoFile = document.getElementById('team1LogoInput').files[0];
+            const team2Name = document.getElementById('team2NameInput').value;
+            const team2Score = document.getElementById('team2ScoreInput').value;
+            const team2Fouls = document.getElementById('team2FoulsInput').value;
+            const team2LogoFile = document.getElementById('team2LogoInput').files[0];
+            const quarter = document.getElementById('quarterInput').value;
+
+            Promise.all([uploadLogo('team1', team1LogoFile), uploadLogo('team2', team2LogoFile)]).then((logos) => {
+                const team1Logo = logos[0];
+                const team2Logo = logos[1];
+
+                db.collection("scoreboard").doc("currentScores").set({
+                    team1: { name: team1Name, score: team1Score, fouls: team1Fouls, logo: team1Logo },
+                    team2: { name: team2Name, score: team2Score, fouls: team2Fouls, logo: team2Logo },
+                    shotClock: 24, // default value, will be updated by other functions
+                    quarter: quarter,
+                    quarterTime: '12:00' // default value, will be updated by other functions
+                }).then(() => {
+                    alert('Scores updated successfully');
+                }).catch((error) => {
+                    alert('Failed to update scores: ' + error);
+                });
+            });
+        }
+
+        function setShotClock(time) {
+            db.collection("scoreboard").doc("currentScores").update({
+                shotClock: time
+            });
+        }
+
+        function stopShotClock() {
+            // Custom logic to stop shot clock
+        }
+
+        function adjustQuarterTime(seconds) {
+            db.collection("scoreboard").doc("currentScores").get().then((doc) => {
+                if (doc.exists) {
+                    let currentTime = doc.data().quarterTime.split(':');
+                    let minutes = parseInt(currentTime[0]);
+                    let secs = parseInt(currentTime[1]);
+                    let totalSeconds = minutes * 60 + secs + seconds;
+
+                    if (totalSeconds < 0) totalSeconds = 0;
+
+                    let newMinutes = Math.floor(totalSeconds / 60);
+                    let newSeconds = totalSeconds % 60;
+
+                    let newTime = newMinutes.toString().padStart(2, '0') + ':' + newSeconds.toString().padStart(2, '0');
+
+                    db.collection("scoreboard").doc("currentScores").update({
+                        quarterTime: newTime
+                    });
+                }
+            });
+        }
+
+        function stopQuarterTime() {
+            // Custom logic to stop quarter time
+        }
+
+        function startQuarterTime() {
+            // Custom logic to start quarter time
+        }
+    </script>
+</body>
+</html>

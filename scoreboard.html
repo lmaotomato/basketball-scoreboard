@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basketball Scoreboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+        }
+        .scoreboard {
+            display: inline-block;
+            background: #333;
+            color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .team {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px 0;
+        }
+        .team-logo {
+            width: 50px;
+            height: 50px;
+            margin-right: 10px;
+        }
+        .team-name {
+            font-size: 24px;
+        }
+        .score, .shotclock, .quarter, .quarter-time, .fouls {
+            font-size: 48px;
+            margin: 10px 0;
+        }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-firestore.js"></script>
+</head>
+<body>
+    <div class="scoreboard">
+        <div class="team">
+            <img id="team1Logo" class="team-logo" src="" alt="Team 1 Logo">
+            <div class="team-name" id="team1Name">Team 1</div>
+        </div>
+        <div class="score" id="team1Score">0</div>
+        
+        <div class="shotclock" id="shotClock">24</div>
+        <div class="quarter" id="quarter">1st Quarter</div>
+        <div class="quarter-time" id="quarterTime">12:00</div>
+        
+        <div class="team">
+            <img id="team2Logo" class="team-logo" src="" alt="Team 2 Logo">
+            <div class="team-name" id="team2Name">Team 2</div>
+        </div>
+        <div class="score" id="team2Score">0</div>
+        
+        <div class="fouls" id="team1Fouls">Fouls: 0</div>
+        <div class="fouls" id="team2Fouls">Fouls: 0</div>
+    </div>
+
+    <script>
+        var firebaseConfig = {
+            apiKey: "YAIzaSyAWJ-jsq3Jh_oMiE3HRBYudcQo-deMCvrc",
+            authDomain: "scoreboard-78abf.firebaseapp.com",
+            projectId: "Yscoreboard-78abf",
+            storageBucket: "scoreboard-78abf.appspot.com",
+            messagingSenderId: "920884021528",
+            appId: "1:920884021528:web:8e4a8cbb3730bf6cbff66d"
+        };
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.firestore();
+
+        function updateScoreboard() {
+            db.collection("scoreboard").doc("currentScores")
+                .onSnapshot((doc) => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        document.getElementById('team1Name').innerText = data.team1.name;
+                        document.getElementById('team1Score').innerText = data.team1.score;
+                        document.getElementById('team2Name').innerText = data.team2.name;
+                        document.getElementById('team2Score').innerText = data.team2.score;
+                        document.getElementById('shotClock').innerText = data.shotClock;
+                        document.getElementById('quarter').innerText = data.quarter;
+                        document.getElementById('quarterTime').innerText = data.quarterTime;
+                        document.getElementById('team1Fouls').innerText = 'Fouls: ' + data.team1.fouls;
+                        document.getElementById('team2Fouls').innerText = 'Fouls: ' + data.team2.fouls;
+                        document.getElementById('team1Logo').src = data.team1.logo;
+                        document.getElementById('team2Logo').src = data.team2.logo;
+                    }
+                });
+        }
+
+        updateScoreboard();
+    </script>
+</body>
+</html>
